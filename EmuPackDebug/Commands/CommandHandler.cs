@@ -1,6 +1,8 @@
-﻿using System;
+﻿using EmuPackDebug.Machine;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,31 +10,49 @@ namespace EmuPackDebug.Commands
 {
     class CommandHandler
     {
-        public CommandResponse ExecuteCommand(string commandString)
+        public CommandExecutionObject ExecuteCommand(MachineState machineState, string commandString)
         {
             string index = GetCommandStringIndex(commandString);
             bool indexIsValid = ValidateCommandIndex(index);
             if (!indexIsValid)
             {
-                NotRecognizedRequestResponse response = new NotRecognizedRequestResponse();
-                return response;
+                GetNotRecongnizedCommand();
             }
 
-            ParseAndExecuteCommand(index, commandString);
+            return GetCommand(index, commandString).Execute(machineState);
         }
 
         private string GetCommandStringIndex(string commandString)
         {
-            return commandString.Substring(CommandValues.IndexStartIndex, 
-                CommandValues.IndexLength);
+            return string.Join("",
+                commandString.Skip(CommandValues.IndexStartIndex)
+                    .Take(CommandValues.IndexLength));
         }
-        
+
         private bool ValidateCommandIndex(string index)
         {
-            return CommandHandlerValues.CommandIndexes.Contains(index);
+            return CommandHandlerValues.CommandsIndexes.Keys.Contains(index);
         }
 
+        private CommandExecutionObject GetNotRecongnizedCommand()
+        {
+            Func<CommandResponse> commandToExecute = () =>
+            {
+                return new NotRecognizedRequestResponse();
+            };
+            return new CommandExecutionObject(commandToExecute, 0, false);
+        }
 
+        private Command GetCommand(string index, string commandString)
+        {
+            CommandHandlerValues.CommandsIndexes.TryGetValue(index, out string commandClass);
+            string namespaceString = MethodBase.GetCurrentMethod().ReflectedType.Namespace;
+            Type commandType = Type.GetType(namespaceString + "." + commandClass);
+            ConstructorInfo constructor = commandType.GetConstructor(new[] { typeof(string) });
+            object commandObject = constructor.Invoke(new object[] { commandString });
+
+            return commandObject as Command;
+        }
     }
 
     static class CommandHandlerValues
@@ -43,8 +63,12 @@ namespace EmuPackDebug.Commands
         {
             CommandsIndexes = new Dictionary<string, string>
             {
-                ["IN"] = ""
-            }
+                ["IN"] = "InitializationCommand",
+                ["FL"] = "FillCommand",
+                ["PR"] = "PrescriptionRegistrationCommand",
+                ["MR"] = "MachineActivityRequestCommand",
+                ["SR"] = "StatusRequestCommand"
+            };
         }
     }
 }

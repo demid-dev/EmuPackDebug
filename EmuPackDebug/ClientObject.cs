@@ -1,6 +1,9 @@
-﻿using System;
+﻿using EmuPackDebug.Commands;
+using EmuPackDebug.Machine;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,13 +13,15 @@ namespace EmuPackDebug
     class ClientObject
     {
         private TcpClient _client;
+        private TcpListener _listener;
 
-        public ClientObject(TcpClient client)
+        public ClientObject()
         {
-            _client = client;
+            _client = new TcpClient();
+            _listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8888);
         }
 
-        public void GetMessage()
+        public void GetMessage(MachineState machineState, CommandHandler commandHandler)
         {
             NetworkStream stream = null;
             stream = _client.GetStream();
@@ -33,7 +38,7 @@ namespace EmuPackDebug
                 while (stream.DataAvailable);
 
                 string message = builder.ToString();
-                Console.WriteLine(message);
+                commandHandler.ExecuteCommand(machineState, message);
             }
         }
     }
