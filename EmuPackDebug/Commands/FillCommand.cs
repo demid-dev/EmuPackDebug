@@ -55,6 +55,7 @@ namespace EmuPackDebug.Commands
         static public string[] PodPositionPossibleValues { get; private set; }
         static public int PodPositionStartIndex { get; private set; }
         static public int PodPositionLength { get; private set; }
+        static public string DispensingStartNotification { get; private set; }
         static public int DispensingStartNotificationStartIndex { get; private set; }
         static public int DispensingStartNotificationLength { get; private set; }
         static public int CassetteStartNotificationStartIndex { get; private set; }
