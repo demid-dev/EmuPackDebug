@@ -47,7 +47,7 @@ namespace EmuPackDebug.Commands
 
             return true;
         }
-        public abstract CommandExecutionObject Execute(MachineState machineState);
+        public abstract CommandResponse Execute(MachineState machineState);
 
         private bool ValidateDataLength(string commandString)
         {
@@ -136,6 +136,8 @@ namespace EmuPackDebug.Commands
 
     abstract class CommandResponse
     {
+        private string _response;
+
         public string CommandId { get; protected set; }
         public string SendFrom { get; private set; }
         public string SendTo { get; private set; }
@@ -145,7 +147,18 @@ namespace EmuPackDebug.Commands
         {
             get
             {
-                return CommandId + SendFrom + SendTo + DataLength + ResponseCode;
+                if(_response == null)
+                {
+                    return CommandId + SendFrom + SendTo + DataLength + ResponseCode;
+                }
+                else
+                {
+                    return _response;
+                }
+            }
+            protected set
+            {
+                _response = value;
             }
         }
 

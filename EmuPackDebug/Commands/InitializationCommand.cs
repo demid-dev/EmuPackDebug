@@ -26,29 +26,25 @@ namespace EmuPackDebug.Commands
             return true;
         }
 
-        public override CommandExecutionObject Execute(MachineState machineState)
+        public override CommandResponse Execute(MachineState machineState)
         {
-            Func<InitialiaztionCommandResposne> commandToExecute = () =>
+            if (!IsCommandValid)
             {
-                return new InitialiaztionCommandResposne(CommandResponseCodes.Sucess);
-            };
-            int executionTime = InitializationCommandValues.CommandExecutionTime;
-            bool machineMechanicalPartUsed = true;
+                return new InitialiaztionCommandResposne(CommandResponseCodes.WrongCommandFormat);
+            }
 
-            return new CommandExecutionObject(commandToExecute,
-                executionTime, machineMechanicalPartUsed);
+            machineState.ReinitilizeState();
+            return new InitialiaztionCommandResposne(CommandResponseCodes.Sucess);
         }
     }
 
     static class InitializationCommandValues
     {
         static public string CommandId { get; private set; }
-        static public int CommandExecutionTime { get; private set; }
 
         static InitializationCommandValues()
         {
             CommandId = "IN";
-            CommandExecutionTime = 30000;
         }
     }
 

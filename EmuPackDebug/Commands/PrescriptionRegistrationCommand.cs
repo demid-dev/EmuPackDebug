@@ -42,28 +42,19 @@ namespace EmuPackDebug.Commands
             Console.WriteLine("Valid: " + IsCommandValid);
         }
 
-        public override CommandExecutionObject Execute(MachineState machineState)
+        public override CommandResponse Execute(MachineState machineState)
         {
-            Func<PrescriptionRegistrationCommandResponse> commandToExecute = () =>
+            if (!IsCommandValid)
             {
-                if (!IsCommandValid)
-                {
-                    return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.WrongCommandFormat);
-                }
-                if (!ValidateCommandByMachine(machineState))
-                {
-                    return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.MachineBlockedCommand);
-                }
-                RegisterPrescription(machineState);
+                return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.WrongCommandFormat);
+            }
+            if (!ValidateCommandByMachine(machineState))
+            {
+                return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.MachineBlockedCommand);
+            }
+            RegisterPrescription(machineState);
 
-                return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.Sucess);
-            };
-
-            int executionTime = PrescriptionRegistrationCommandValues.ExecutionTime;
-            bool machineMechanicalPartUsed = false;
-
-            return new CommandExecutionObject(commandToExecute,
-                executionTime, machineMechanicalPartUsed);
+            return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.Sucess);
         }
 
         public override bool ValidateCommand(string commandString)
@@ -233,7 +224,7 @@ namespace EmuPackDebug.Commands
         }
     }
 
-    class PrescriptionRegistrationCommandResponse: CommandResponse
+    class PrescriptionRegistrationCommandResponse : CommandResponse
     {
         public PrescriptionRegistrationCommandResponse(CommandResponseCodes code) : base(code)
         {

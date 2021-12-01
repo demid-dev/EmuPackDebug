@@ -55,29 +55,20 @@ namespace EmuPackDebug.Commands
             Console.WriteLine("Valid:" + IsCommandValid);
         }
 
-        public override CommandExecutionObject Execute(MachineState machineState)
+        public override CommandResponse Execute(MachineState machineState)
         {
-            Func<FillCommandResponse> commandToExecute = () =>
+            if (!IsCommandValid)
             {
-                if (!IsCommandValid)
-                {
-                    return new FillCommandResponse(CommandResponseCodes.WrongCommandFormat);
-                }
-                if (!ValidateCommandByMachine(machineState))
-                {
-                    
-                    return new FillCommandResponse(CommandResponseCodes.MachineBlockedCommand);
-                }
-                ExecuteFilling(machineState);
+                return new FillCommandResponse(CommandResponseCodes.WrongCommandFormat);
+            }
+            if (!ValidateCommandByMachine(machineState))
+            {
 
-                return new FillCommandResponse(CommandResponseCodes.Sucess);
-            };
+                return new FillCommandResponse(CommandResponseCodes.MachineBlockedCommand);
+            }
+            ExecuteFilling(machineState);
 
-            int executionTime = FillCommandValues.ExecutionTime;
-            bool machineMechanicalPartUsed = true;
-
-            return new CommandExecutionObject(commandToExecute,
-                executionTime, machineMechanicalPartUsed);
+            return new FillCommandResponse(CommandResponseCodes.Sucess);
         }
 
         public override bool ValidateCommand(string commandString)
@@ -174,10 +165,13 @@ namespace EmuPackDebug.Commands
             {
                 int cassetteId = Convert.ToInt32(cassette.CassetteID);
                 int quantityOfDrug = Convert.ToInt32(cassette.QuantityOfDrug);
+                bool validDrugsQuantity = registredPrescription.RegistredCassettes
+                    .Find(cas => cas.CassetteId == cassetteId).DrugQuantity > quantityOfDrug;
 
-                allCassettesQuantityOfDrugsValid = allCassettesQuantityOfDrugsValid &&
-                registredPrescription.RegistredCassettes.Find(cas => cas.CassetteId == cassetteId)
-                .DrugQuantity > quantityOfDrug;
+                allCassettesQuantityOfDrugsValid = allCassettesQuantityOfDrugsValid && validDrugsQuantity;
+
+                if (!validDrugsQuantity)
+                    machineState.WarningCassettesIds.Add(cassette.CassetteID);
             });
             if (!allCassettesQuantityOfDrugsValid)
                 return false;
@@ -198,13 +192,13 @@ namespace EmuPackDebug.Commands
                 int cassetteId = Convert.ToInt32(cassette.CassetteID);
                 int drugsQuantity = Convert.ToInt32(cassette.QuantityOfDrug);
                 Cassette registredCassette = registredPrescription.RegistredCassettes
-                    .Find(cas=> cas.CassetteId == cassetteId);
+                    .Find(cas => cas.CassetteId == cassetteId);
                 string drugName = registredCassette.DrugName;
 
                 registredCassette.DecreaseDrugQuantity(drugsQuantity);
                 DrugInCell existentDrug = drugCell.DrugsInCell
                     .Find(d => d.DrugName == drugName);
-                if(existentDrug != null)
+                if (existentDrug != null)
                 {
                     existentDrug.AddDrugQuantity(drugsQuantity);
                 }

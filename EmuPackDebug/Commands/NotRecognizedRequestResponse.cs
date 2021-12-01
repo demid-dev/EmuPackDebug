@@ -14,8 +14,6 @@ namespace EmuPackDebug.Commands
         {
             DataLength = NotRecognizedRequestResponseValues.DataLength;
             CommandId = NotRecognizedRequestResponseValues.CommandId;
-
-            Console.WriteLine(CommandId + SendFrom + SendTo + DataLength + ResponseCode);
         }
     }
 

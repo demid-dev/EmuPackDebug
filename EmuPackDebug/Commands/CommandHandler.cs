@@ -10,13 +10,13 @@ namespace EmuPackDebug.Commands
 {
     class CommandHandler
     {
-        public CommandExecutionObject ExecuteCommand(MachineState machineState, string commandString)
+        public CommandResponse ExecuteCommand(MachineState machineState, string commandString)
         {
             string index = GetCommandStringIndex(commandString);
             bool indexIsValid = ValidateCommandIndex(index);
             if (!indexIsValid)
             {
-                GetNotRecongnizedCommand();
+                return GetNotRecongnizedCommand();
             }
 
             return GetCommand(index, commandString).Execute(machineState);
@@ -34,13 +34,9 @@ namespace EmuPackDebug.Commands
             return CommandHandlerValues.CommandsIndexes.Keys.Contains(index);
         }
 
-        private CommandExecutionObject GetNotRecongnizedCommand()
+        private CommandResponse GetNotRecongnizedCommand()
         {
-            Func<CommandResponse> commandToExecute = () =>
-            {
-                return new NotRecognizedRequestResponse();
-            };
-            return new CommandExecutionObject(commandToExecute, 0, false);
+            return new NotRecognizedRequestResponse();
         }
 
         private Command GetCommand(string index, string commandString)
