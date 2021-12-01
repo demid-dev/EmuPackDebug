@@ -44,7 +44,26 @@ namespace EmuPackDebug.Commands
 
         public override CommandExecutionObject Execute(MachineState machineState)
         {
-            throw new NotImplementedException();
+            Func<PrescriptionRegistrationCommandResponse> commandToExecute = () =>
+            {
+                if (!IsCommandValid)
+                {
+                    return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.WrongCommandFormat);
+                }
+                if (!ValidateCommandByMachine(machineState))
+                {
+                    return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.MachineBlockedCommand);
+                }
+                RegisterPrescription(machineState);
+
+                return new PrescriptionRegistrationCommandResponse(CommandResponseCodes.Sucess);
+            };
+
+            int executionTime = PrescriptionRegistrationCommandValues.ExecutionTime;
+            bool machineMechanicalPartUsed = false;
+
+            return new CommandExecutionObject(commandToExecute,
+                executionTime, machineMechanicalPartUsed);
         }
 
         public override bool ValidateCommand(string commandString)
@@ -115,6 +134,34 @@ namespace EmuPackDebug.Commands
                 RxRegistrationCommandDrugs.Add(drug);
             }
         }
+
+        protected override bool ValidateCommandByMachine(MachineState machineState)
+        {
+            int prescriptionId = Convert.ToInt32(GetNumberWithoutPadding(PrescriptionId));
+
+            bool prescriptionExist = machineState.RegistredPrescriptions.Any(prescription =>
+                prescription.Id == prescriptionId);
+
+            return !prescriptionExist;
+        }
+
+        private void RegisterPrescription(MachineState machineState)
+        {
+            int prescriptionId = Convert.ToInt32(GetNumberWithoutPadding(PrescriptionId));
+            List<Cassette> cassettes = new List<Cassette>();
+            RxRegistrationCommandDrugs.ForEach(drug =>
+            {
+                int cassetteId = Convert.ToInt32(drug.CassetteId);
+                string drugName = drug.DrugName;
+                int drugQuantity = Convert.ToInt32(drug.QuantityPerCassette);
+                Cassette cassette = new Cassette(cassetteId, drugName, drugQuantity);
+                cassettes.Add(cassette);
+            });
+
+            RegistredPrescription prescription = new RegistredPrescription(prescriptionId);
+            prescription.RegistredCassettes.AddRange(cassettes);
+            machineState.RegistredPrescriptions.Add(prescription);
+        }
     }
 
     class RxRegistrationCommandDrug
@@ -134,6 +181,7 @@ namespace EmuPackDebug.Commands
 
     static class PrescriptionRegistrationCommandValues
     {
+        static public string CommandId { get; private set; }
         static public string RegistrationStartNotification { get; private set; }
         static public int RegistrationStartNotificationStartIndex { get; private set; }
         static public int RegistrationStartNotificationLength { get; private set; }
@@ -155,9 +203,11 @@ namespace EmuPackDebug.Commands
         static public int QuantityPerCassetteMaxValue { get; private set; }
         static public int QuantityPerCassetteStartIndex { get; private set; }
         static public int QuantityPerCassetteLength { get; private set; }
+        static public int ExecutionTime { get; private set; }
 
         static PrescriptionRegistrationCommandValues()
         {
+            CommandId = "PR";
             RegistrationStartNotification = "I";
             RegistrationStartNotificationStartIndex = 11;
             RegistrationStartNotificationLength = 1;
@@ -179,6 +229,16 @@ namespace EmuPackDebug.Commands
             QuantityPerCassetteMaxValue = 99999;
             QuantityPerCassetteStartIndex = 50;
             QuantityPerCassetteLength = 5;
+            ExecutionTime = 0;
+        }
+    }
+
+    class PrescriptionRegistrationCommandResponse: CommandResponse
+    {
+        public PrescriptionRegistrationCommandResponse(CommandResponseCodes code) : base(code)
+        {
+            CommandId = PrescriptionRegistrationCommandValues.CommandId;
+            DataLength = "00002";
         }
     }
 }

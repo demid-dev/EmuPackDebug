@@ -46,7 +46,6 @@ namespace EmuPackDebug.Commands
 
             CassettesUsedInFilling.ForEach((cassette) =>
             {
-                Console.WriteLine(cassette.CassetteID + cassette.QuantityOfDrug);
                 command += cassette.CassetteID + cassette.QuantityOfDrug;
             });
 
@@ -58,7 +57,27 @@ namespace EmuPackDebug.Commands
 
         public override CommandExecutionObject Execute(MachineState machineState)
         {
-            throw new NotImplementedException();
+            Func<FillCommandResponse> commandToExecute = () =>
+            {
+                if (!IsCommandValid)
+                {
+                    return new FillCommandResponse(CommandResponseCodes.WrongCommandFormat);
+                }
+                if (!ValidateCommandByMachine(machineState))
+                {
+                    
+                    return new FillCommandResponse(CommandResponseCodes.MachineBlockedCommand);
+                }
+                ExecuteFilling(machineState);
+
+                return new FillCommandResponse(CommandResponseCodes.Sucess);
+            };
+
+            int executionTime = FillCommandValues.ExecutionTime;
+            bool machineMechanicalPartUsed = true;
+
+            return new CommandExecutionObject(commandToExecute,
+                executionTime, machineMechanicalPartUsed);
         }
 
         public override bool ValidateCommand(string commandString)
@@ -127,6 +146,75 @@ namespace EmuPackDebug.Commands
                 CassettesUsedInFilling.Add(cassetteUsedInFilling);
             }
         }
+
+        protected override bool ValidateCommandByMachine(MachineState machineState)
+        {
+            int prescriptionId = Convert.ToInt32(GetNumberWithoutPadding(PrescriptionId));
+            RegistredPrescription registredPrescription = machineState.RegistredPrescriptions
+                .Find(prescription => prescription.Id == prescriptionId);
+
+            if (machineState.DrawerOpened || !machineState.Adaptor.AdaptorInsideMachine)
+                return false;
+
+            if (registredPrescription == null)
+                return false;
+
+            bool allCassettesExist = true;
+            CassettesUsedInFilling.ForEach(cassette =>
+            {
+                int cassetteId = Convert.ToInt32(cassette.CassetteID);
+                allCassettesExist = allCassettesExist && registredPrescription.RegistredCassettes.Any(cas
+                    => cas.CassetteId == cassetteId);
+            });
+            if (!allCassettesExist)
+                return false;
+
+            bool allCassettesQuantityOfDrugsValid = true;
+            CassettesUsedInFilling.ForEach(cassette =>
+            {
+                int cassetteId = Convert.ToInt32(cassette.CassetteID);
+                int quantityOfDrug = Convert.ToInt32(cassette.QuantityOfDrug);
+
+                allCassettesQuantityOfDrugsValid = allCassettesQuantityOfDrugsValid &&
+                registredPrescription.RegistredCassettes.Find(cas => cas.CassetteId == cassetteId)
+                .DrugQuantity > quantityOfDrug;
+            });
+            if (!allCassettesQuantityOfDrugsValid)
+                return false;
+
+            return true;
+        }
+
+        private void ExecuteFilling(MachineState machineState)
+        {
+            int prescriptionId = Convert.ToInt32(GetNumberWithoutPadding(PrescriptionId));
+            RegistredPrescription registredPrescription = machineState.RegistredPrescriptions
+                .Find(prescription => prescription.Id == prescriptionId);
+            DrugCell drugCell = machineState.Adaptor.DrugPack.DrugCells
+                .Find(cell => cell.CellName == PodPosition);
+
+            CassettesUsedInFilling.ForEach(cassette =>
+            {
+                int cassetteId = Convert.ToInt32(cassette.CassetteID);
+                int drugsQuantity = Convert.ToInt32(cassette.QuantityOfDrug);
+                Cassette registredCassette = registredPrescription.RegistredCassettes
+                    .Find(cas=> cas.CassetteId == cassetteId);
+                string drugName = registredCassette.DrugName;
+
+                registredCassette.DecreaseDrugQuantity(drugsQuantity);
+                DrugInCell existentDrug = drugCell.DrugsInCell
+                    .Find(d => d.DrugName == drugName);
+                if(existentDrug != null)
+                {
+                    existentDrug.AddDrugQuantity(drugsQuantity);
+                }
+                else
+                {
+                    DrugInCell drug = new DrugInCell(drugName, drugsQuantity);
+                    drugCell.DrugsInCell.Add(drug);
+                }
+            });
+        }
     }
 
     class CassetteUsedInFilling
@@ -172,6 +260,7 @@ namespace EmuPackDebug.Commands
         static public int QuantityOfDrugMaxValue { get; private set; }
         static public int QuantityOfDrugStartIndex { get; private set; }
         static public int QuantityOfDrugLength { get; private set; }
+        static public int ExecutionTime { get; private set; }
 
         static FillCommandValues()
         {
@@ -208,7 +297,16 @@ namespace EmuPackDebug.Commands
             QuantityOfDrugMaxValue = 99;
             QuantityOfDrugStartIndex = 24;
             QuantityOfDrugLength = 2;
+            ExecutionTime = 5000;
         }
     }
 
+    class FillCommandResponse : CommandResponse
+    {
+        public FillCommandResponse(CommandResponseCodes code) : base(code)
+        {
+            CommandId = FillCommandValues.CommandId;
+            DataLength = "00002";
+        }
+    }
 }

@@ -26,7 +26,9 @@ namespace EmuPackDebug.Machine
 
         public void ReceiveMessage(string message)
         {
-            ExecuteCommand(_commandHandler.ExecuteCommand(MachineState, "INC1M100000"));
+            ExecuteCommand(_commandHandler.ExecuteCommand(MachineState, "PRC1M100192I00910510TUTU                          5000011RUTU                          5000012RURU                          5000013TURU                          5000014RURT                          50000"));
+            ExecuteCommand(_commandHandler.ExecuteCommand(MachineState, "FLC1M100023P0091A0MC03130512031304"));
+            ExecuteCommand(_commandHandler.ExecuteCommand(MachineState, "FLC1M100023P0091A0MC03130512031304"));
         }
 
         private void ExecuteCommand(CommandExecutionObject executionObject)
@@ -50,9 +52,29 @@ namespace EmuPackDebug.Machine
         {
             while (true)
             {
-                if(_responsesQueue.Count != 0)
+                Thread.Sleep(1000);
+                if(_responsesQueue.Any())
                 {
                     Console.WriteLine(_responsesQueue.Dequeue().Response);
+                    MachineState.RegistredPrescriptions.ForEach(prescription =>
+                    {
+                        Console.WriteLine($"Id: {prescription.Id}");
+                        prescription.RegistredCassettes.ForEach(cassette =>
+                        {
+                            Console.WriteLine($"Cassette id: {cassette.CassetteId}");
+                            Console.WriteLine($"Drug name: {cassette.DrugName}");
+                            Console.WriteLine($"Drug quantity: {cassette.DrugQuantity}");
+                        });
+                        MachineState.Adaptor.DrugPack.DrugCells.ForEach(cell =>
+                        {
+                            Console.WriteLine($"\n Cell {cell.CellName}");
+                            cell.DrugsInCell.ForEach(drug =>
+                            {
+                                Console.WriteLine($"Name: {drug.DrugName}; Quantity: {drug.DrugQuantity}");
+                            });
+                        });
+                    });
+
                 }
             }
         }

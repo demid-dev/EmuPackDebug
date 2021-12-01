@@ -91,6 +91,10 @@ namespace EmuPackDebug.Commands
         {
             return field.Length == length;
         }
+
+        protected virtual bool ValidateCommandByMachine(MachineState machineState) {
+            return true;
+        }
     }
 
     static class CommandValues
