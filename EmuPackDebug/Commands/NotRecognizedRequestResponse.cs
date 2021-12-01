@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 
 namespace EmuPackDebug.Commands
 {
-    class NotRecognizedRequestResponse: CommandResponse
+    class NotRecognizedRequestResponse : CommandResponse
     {
-        public NotRecognizedRequestResponse()
+        public NotRecognizedRequestResponse(CommandResponseCodes code = 
+            CommandResponseCodes.WrongCommandFormat) : base(code)
         {
             DataLength = NotRecognizedRequestResponseValues.DataLength;
             CommandId = NotRecognizedRequestResponseValues.CommandId;
-            ResponseCode = NotRecognizedRequestResponseValues.ResponseCode;
+
+            Console.WriteLine(CommandId + SendFrom + SendTo + DataLength + ResponseCode);
         }
     }
 

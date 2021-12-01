@@ -18,19 +18,19 @@ namespace EmuPackDebug.Commands
 
         public override bool ValidateCommand(string commandString)
         {
-            bool commandIsValid = true;
-
+            if (!base.ValidateCommand(commandString))
+                return false;
             if (CommandId != InitializationCommandValues.CommandId)
-                commandIsValid = false;
+                return false;
 
-            return base.ValidateCommand(commandString) && commandIsValid;
+            return true;
         }
 
         public override CommandExecutionObject Execute(MachineState machineState)
         {
             Func<InitialiaztionCommandResposne> commandToExecute = () =>
             {
-                return new InitialiaztionCommandResposne();
+                return new InitialiaztionCommandResposne(CommandResponseCodes.Sucess);
             };
             int executionTime = InitializationCommandValues.CommandExecutionTime;
             bool machineMechanicalPartUsed = true;
@@ -54,11 +54,10 @@ namespace EmuPackDebug.Commands
 
     class InitialiaztionCommandResposne : CommandResponse
     {
-        public InitialiaztionCommandResposne()
+        public InitialiaztionCommandResposne(CommandResponseCodes code) : base(code)
         {
             CommandId = InitializationCommandValues.CommandId;
             DataLength = "00002";
-            ResponseCode = "00";
         }
     }
 }

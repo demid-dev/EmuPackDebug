@@ -17,8 +17,8 @@ namespace EmuPackDebug.Commands
 
         public Command(string commandString)
         {
-            CommandId = ReadCommandField(commandString, 
-                CommandValues.IndexStartIndex, 
+            CommandId = ReadCommandField(commandString,
+                CommandValues.IndexStartIndex,
                 CommandValues.IndexLength);
             SendFrom = ReadCommandField(commandString,
                 CommandValues.SendFromStartIndex,
@@ -53,18 +53,43 @@ namespace EmuPackDebug.Commands
         {
             if (DataLength.Length != CommandValues.DataLengthLength) return false;
 
-            string dataLength = DataLength;
+            string dataLength = GetNumberWithoutPadding(DataLength);
 
-            while (dataLength.Length > 1 && dataLength[0] == '0')
-            {
-                dataLength = dataLength.Remove(0, 1);
-            }
-
-            bool dataLengthParsed = int.TryParse(DataLength, out int dataLengthNumber);
+            bool dataLengthParsed = int.TryParse(dataLength, out int dataLengthNumber);
 
             if (!dataLengthParsed) return false;
 
             return (commandString.Length - CommandValues.NoDataLength) == dataLengthNumber;
+        }
+
+        protected virtual string GetNumberWithoutPadding(string number)
+        {
+            while (number.Length > 1 && number[0] == '0')
+            {
+                number = number.Remove(0, 1);
+            }
+            return number;
+        }
+
+        protected virtual bool ValidateNumericalField(string field, int fieldLength, int minValue, int maxValue)
+        {
+            if (!ValidateFieldByLength(field, fieldLength))
+                return false;
+
+            bool fieldParsed = int.TryParse(GetNumberWithoutPadding(field),
+                out int numericalField);
+
+            if (!fieldParsed
+                || numericalField < minValue
+                || numericalField > maxValue)
+                return false;
+
+            return true;
+        }
+
+        protected virtual bool ValidateFieldByLength(string field, int length)
+        {
+            return field.Length == length;
         }
     }
 
@@ -98,6 +123,13 @@ namespace EmuPackDebug.Commands
         }
     }
 
+    enum CommandResponseCodes
+    {
+        Sucess,
+        WrongCommandFormat,
+        MachineBlockedCommand
+    }
+
     abstract class CommandResponse
     {
         public string CommandId { get; protected set; }
@@ -113,22 +145,31 @@ namespace EmuPackDebug.Commands
             }
         }
 
-        public CommandResponse()
+        public CommandResponse(CommandResponseCodes commandResponseCode)
         {
             SendFrom = CommandResponseValues.SendFrom;
             SendTo = CommandResponseValues.SendTo;
+            CommandResponseValues.ResponseCodes.TryGetValue(commandResponseCode, out string code);
+            ResponseCode = code;
         }
     }
 
     static class CommandResponseValues
-    {     
-        static public string SendFrom { get; set; }
-        static public string SendTo { get; set; }
+    {
+        static public string SendFrom { get; private set; }
+        static public string SendTo { get; private set; }
+        static public Dictionary<CommandResponseCodes, string> ResponseCodes { get; private set; }
 
         static CommandResponseValues()
         {
             SendFrom = "M1";
             SendTo = "C1";
+            ResponseCodes = new Dictionary<CommandResponseCodes, string>
+            {
+                [CommandResponseCodes.Sucess] = "00",
+                [CommandResponseCodes.WrongCommandFormat] = "01",
+                [CommandResponseCodes.MachineBlockedCommand] = "02"
+            };
         }
     }
 }
